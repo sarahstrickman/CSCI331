@@ -19,6 +19,17 @@ TERRAINS = {"OPEN" : 100,
             "FOOTPATH" : 100,
             "OUT_OF_BOUNDS" : 100} # different terrains and their default speed (slope = 0)
 
+TERRAINCOLORS = {(248,148,18) : "OPEN",
+                 (255,192,0) : "MEADOW",
+                 (255,255,255) : "FOREST_EASY_MOVEMENT",
+                 (2,208,60) : "FOREST_SLOW_RUN",
+                 (2,136,40) : "FOREST_WALK",
+                 (5,73,24) : "IMPASSIBLE",
+                 (0,0,255) : "WATER",
+                 (71,51,3) : "PAVED",
+                 (0,0,0) : "FOOTPATH",
+                 (205,0,101) : "OUT_OF_BOUNDS"}
+
 PIXELMETERS_X = 10.29
 PIXELMETERS_Y = 7.55
 

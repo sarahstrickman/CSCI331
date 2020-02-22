@@ -1,5 +1,5 @@
 import sys
-import PIL
+from PIL import Image
 import math
 from src.util import *
 
@@ -18,14 +18,26 @@ def processElevation(elevationFileName : str):
         points = line.split()
         j = 0
         for item in points:
-            # initialize all points with their elevation. -1 == uninitialized MapPoint attribute.
-            map[i].append(MapPoint(PIXELMETERS_X * i, PIXELMETERS_Y * j, float(item), ""))
+            # initialize all points with their location.
+            # By default, all points are out of bounds. This will be initialized in processTerrains().
+            map[i].append(MapPoint(PIXELMETERS_X * i, PIXELMETERS_Y * j, float(item), "OUT_OF_BOUNDS"))
         i += 1
     f.close()
 
 
 def processTerrains(terrainimg : str):
-    pass
+    im = Image.open(terrainimg)
+    px = im.load()
+    width, height = im.size
+    for x in range(width):
+        for y in range(height):
+            rgba = im.getpixel((x, y))
+            r = rgba[0]
+            g = rgba[1]
+            b = rgba[2]
+            if (r, g, b) in TERRAINCOLORS:
+                map[x][y] = TERRAINCOLORS[(r, g, b)]
+    im.close()
 
 '''
 Given a file containing the path, make a list of points that you're travelling to.
@@ -50,7 +62,7 @@ def main():
     if len(sys.argv) != 6:
         print("Usage :\n\t$python3 lab1.py terrain.png mpp.txt red.txt winter redWinter.png")
 
-    terrain_map = sys.argv[1]
+    terrain_file = sys.argv[1]
     elevation_file = sys.argv[2]
     path_file = sys.argv[3]
     season = ""
@@ -61,7 +73,10 @@ def main():
         sys.exit( 1 )
     output_filename = sys.argv[5]
 
+    # process the files and parameters that you're given
     processElevation(elevation_file)
+    processTerrains(terrain_file)
+    processPath(path_file)
 
 
 if __name__ == "__main__":
