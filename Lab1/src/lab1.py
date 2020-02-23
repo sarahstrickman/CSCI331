@@ -5,6 +5,167 @@ from src.util import *
 
 map = []
 
+
+'''
+f = g + h
+g = accumulative cost to move (from start)
+h = heuristic (lower == better)
+'''
+def a_star(startpoint : MapPoint, endPoint : MapPoint):
+    frontier = dict()       # (MapPoint : int)
+    closed = dict()     # (MapPoint : int)
+    parents = dict()    # (MapPoint : MapPoint)
+    startpoint = startpoint.toString()
+    parents[startpoint] = None
+    frontier[startpoint] = 0
+    keyList = list(frontier.keys())
+    while len(keyList) > 0:
+        chosen_st = keyList[0]         # chosen    = node with smallest f
+        smallest = frontier[chosen_st]     # smallest  = smallest f
+        for item in keyList:
+            if frontier[item] < smallest:
+                smallest = frontier[item]
+        # smallest will now be a number corresponding to the smallest f
+        # in the frontier keys.
+
+        # take the smallest value out of the frontier dictionary
+        del frontier[chosen_st]
+        print(chosen_st)
+        chosen = fromString(chosen_st)
+        neighbors = getNeighbors(chosen)
+        parent_g = smallest - heuristicFunction(chosen, endPoint)       # g = f - h
+        for n in neighbors:
+            parents[n.toString] = chosen
+
+            if n.toString() == endPoint.toString():
+                return parents
+
+            succ_f = (parent_g + getTime(chosen, n)) + heuristicFunction(n, endPoint)
+
+            toSkip = False
+            if n.toString() in frontier:
+                if frontier[n.toString()] <= succ_f:
+                    toSkip = True
+            if n.toString() in closed:
+                if frontier[n.toString()] <= succ_f:
+                    toSkip = True
+            if toSkip == False:
+                frontier[n.toString()] = succ_f
+
+        closed[chosen_st] = smallest
+
+    backTrace = endPoint
+    while backTrace != None:
+        backTrace.isSolution = True
+        backTrace = parents[backTrace]
+    return 0
+
+
+def a_star_path(path):
+    print(path)
+    i = 0
+    while i < len(path) - 1:
+        a_star(path[i], endPoint=path[i + 1])
+        i += 1
+    a_star(path[len(path) - 1], path[0])
+
+'''
+Process the map during the spring.
+'''
+def processSpring():
+    global map
+    border_land_pixels = []
+    visited = dict()  # set of all explored nodes
+    for x in range(len(map)):
+        for y in range(len(map[x])):
+            p = map[x][y]
+            # print(p.toString())
+            if p.terrain == "WATER":
+                n = getNeighbors(p)
+                for item in n:
+                    if item.terrain != "WATER":
+                        border_land_pixels.append(item)
+    iteration = 0
+    waterheight = border_land_pixels[0].z
+    while iteration < 15:
+        frontier = list()
+        for idx in range(len(border_land_pixels)):
+            border_land_pixels[idx].terrain = "MUD"
+            neighbors = getNeighbors(border_land_pixels[idx])
+            for n in neighbors:
+                visited[border_land_pixels[idx].toString()] = border_land_pixels[idx]
+                if (n.terrain == "WATER") or (n.terrain == "OUT_OF_BOUNDS") or\
+                          (n.toString() in visited):  # ((n.z - waterheight) > 1.0) or
+                    pass
+                # elif ((n.z - waterheight) > 1.0):
+                #     print(n.z - waterheight)
+                else:
+                    frontier.append(n)
+        border_land_pixels = frontier
+        iteration += 1
+
+'''
+Process the map during the winter.
+'''
+def processWinter():
+    global map
+    border_water_pixels = []
+    visited = dict()     # set of all explored nodes
+    for x in range(len(map)):
+        for y in range(len(map[x])):
+            p = map[x][y]
+            if p.terrain == "WATER":
+                n = getNeighbors(p)
+                for item in n:
+                    if item.terrain != "WATER":
+                        border_water_pixels.append(p)
+                        break
+    iteration = 0
+    while iteration < 7:
+        frontier = list()
+        for idx in range(len(border_water_pixels)):
+            border_water_pixels[idx].terrain = "ICE"
+            neighbors = getNeighbors(border_water_pixels[idx])
+            for n in neighbors:
+                visited[border_water_pixels[idx].toString()] = border_water_pixels[idx]
+                if (n.terrain != "WATER") or (n.toString() in visited):
+                    pass
+                else:
+                    frontier.append(n)
+        border_water_pixels = frontier
+        iteration += 1
+
+'''
+Process the map during the fall.
+'''
+def processFall():
+    global map
+    affectedPixels = []
+    for x in range(len(map)):
+        for y in range(len(map[x])):
+            p = map[x][y]
+            if p == "FOOTPATH":
+                if (p.x > 0) and (map[x - 1][y].terrain == "FOREST_EASY_MOVEMENT"):    # check pixel above p
+                    affectedPixels.append(p)
+                elif (p.x < (len(map) - 1)) and (map[x + 1][y].terrain) == "FOREST_EASY_MOVEMENT": # check pixel below p
+                    affectedPixels.append(p)
+                elif (p.y > 0) and (map[x][y - 1].terrain == "FOREST_EASY_MOVEMENT"):    # check pixel left of p
+                    affectedPixels.append(p)
+                elif (p.y < (len(map[x]) - 1)) and (map[x][y + 1].terrain == "FOREST_EASY_MOVEMENT"): # check pixel right of p
+                    affectedPixels.append(p)
+                elif p.x > 0 and p.y > 0 and map[x - 1][y - 1] == "FOREST_EASY_MOVEMENT": # check top left
+                    affectedPixels.append(p)
+                elif p.x > 0 and p.y < len(map[x]) and map[x - 1][y + 1] == "FOREST_EASY_MOVEMENT":   # check top right
+                    affectedPixels.append(p)
+                elif p.x < len(map) and p.y > 0 and map[x + 1][y - 1] == "FOREST_EASY_MOVEMENT":  # check bot left
+                    affectedPixels.append(p)
+                elif p.x < len(map) and p.y < len(map[x]) and map[x + 1][y + 1] == "FOREST_EASY_MOVEMENT":  # check bot right
+                    affectedPixels.append(p)
+    for item in affectedPixels:
+        item.terrain = "FOOTPATH_FALL"
+
+#########
+
 '''
 Process the elevation map. This is the first function run, and is responsible 
 for creating the mapPoints and populating the map. 
@@ -20,12 +181,16 @@ def processElevation(elevationFileName : str):
         for item in points:
             # initialize all points with their location.
             # By default, all points are out of bounds. This will be initialized in processTerrains().
-            map[i].append(MapPoint(PIXELMETERS_X * i, PIXELMETERS_Y * j, float(item), "OUT_OF_BOUNDS"))
+            map[i].append(MapPoint(PIXELMETERS_X * i, PIXELMETERS_Y * j, float(item), "OUT_OF_BOUNDS", False))
+            j += 1
         i += 1
     f.close()
 
-
+'''
+Process the terrains for the map. Given an image filename, assign terrains to the pre-existing MapPoints.
+'''
 def processTerrains(terrainimg : str):
+    global map
     im = Image.open(terrainimg)
     px = im.load()
     width, height = im.size
@@ -36,7 +201,7 @@ def processTerrains(terrainimg : str):
             g = rgba[1]
             b = rgba[2]
             if (r, g, b) in TERRAINCOLORS:
-                map[x][y] = TERRAINCOLORS[(r, g, b)]
+                map[y][x].terrain = TERRAINCOLORS[(r, g, b)]
     im.close()
 
 '''
@@ -50,10 +215,59 @@ def processPath(pathFileName : str):
     with open(pathFileName) as f:
         for line in f:
             coords = line.split()
-            # n_point = map[int(coords[0])][int(coords[1])]
-            n_point = MapPoint(int(coords[0]) * PIXELMETERS_X, int(coords[1]) * PIXELMETERS_Y, 0, "")
-
+            n_point = map[int(coords[0])][int(coords[1])]
+            path.append(n_point)
+    f.close()
     return path
+
+#########
+
+'''
+Get all of the neighbors of a point.
+'''
+def getNeighbors(p : MapPoint):
+    ix = int(p.x / PIXELMETERS_X)
+    iy = int(p.y / PIXELMETERS_Y)
+    neighbors = []
+    # if ix > 0 and iy > 0:                                     # check top left
+    #     neighbors.append(map[ix - 1][iy - 1])
+    # if ix > 0 and iy < len(map[ix]):                          # check top right
+    #     neighbors.append(map[ix - 1][iy + 1])
+    # if ix < len(map) and iy > 0:                              # check bot left
+    #     neighbors.append(map[ix + 1][iy - 1])
+    # if ix < len(map) and iy < len(map[ix]):                   # check bot right
+    #     neighbors.append(map[ix + 1][iy + 1])
+    if (ix > 0):                                               # check pixel above p
+       neighbors.append(map[ix - 1][iy])
+    if (ix < (len(map) - 1)):                                  # check pixel below p
+        neighbors.append(map[ix + 1][iy])
+    if (iy > 0):                                               # check pixel left of p
+        neighbors.append(map[ix][iy - 1])
+    if (iy < (len(map[ix]) - 1)):                              # check pixel right of p
+        neighbors.append(map[ix][iy + 1])
+    return neighbors
+
+def fromString(code : str):
+    splitter = code.split(";")
+    ix = int(float(splitter[0]) / PIXELMETERS_X)
+    iy = int(float(splitter[1]) / PIXELMETERS_Y)
+    return map[ix][iy]
+
+'''
+output the map data to an image.
+'''
+def writeImage(outputFile : str):
+    im = Image.new("RGB", (len(map[0]) - 5, len(map) - 5), 0)
+    t_colors = dict()
+    for k in TERRAINCOLORS.keys():
+        t_colors[TERRAINCOLORS[k]] = k
+    for x in range(len(map) - 5):
+        for y in range(len(map[x]) - 5):
+            pixelColor = t_colors[map[x][y].terrain]
+            im.putpixel((y, x), pixelColor)
+    im.show()
+
+#########
 
 '''
 Handles argument things. Differs execution of the image processing and A* to other functions.
@@ -76,7 +290,17 @@ def main():
     # process the files and parameters that you're given
     processElevation(elevation_file)
     processTerrains(terrain_file)
-    processPath(path_file)
+    dests = processPath(path_file)
+
+    if season == "fall":
+        processFall()
+    elif season == "winter":
+        processWinter()
+    elif season == "spring":
+        processSpring()
+    a_star_path(dests)
+    writeImage(output_filename)
+
 
 
 if __name__ == "__main__":
