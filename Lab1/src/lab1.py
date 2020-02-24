@@ -2,8 +2,23 @@ import sys
 from PIL import Image
 import math
 from src.util import *
+import queue
 
 map = []
+
+'''
+points defined for the a_star. This will store the f() data and the mapPoint associated with it.
+'''
+@dataclass
+class APoint:
+    mappoint : MapPoint
+    f : float
+
+    def __eq__(self, other):
+        return self.mappoint.toString() == other.toString()
+
+    def __lt__(self, other):
+        return self.f < other.f
 
 
 '''
@@ -14,53 +29,70 @@ h = heuristic (lower == better)
 def a_star(startpoint : MapPoint, endPoint : MapPoint):
 
     done = False
-
-    frontier = dict()       # (MapPoint : int)
+    fq = queue.PriorityQueue()
+    # frontier = dict()       # (MapPoint : int)
+    fq.put(APoint(startpoint, 0))
     closed = dict()     # (MapPoint : int)
     parents = dict()    # (MapPoint : MapPoint)
     startpoint = startpoint.toString()
     parents[startpoint] = None
-    frontier[startpoint] = 0 #getTime(startpoint, endPoint) + heuristicFunction(startpoint, endPoint)
-    keyList = list(frontier.keys())
-    while len(keyList) > 0:
-        chosen_st = keyList[0]         # chosen    = node with smallest f
-        smallest = frontier[chosen_st]     # smallest  = smallest f
-        for item in keyList:
-            if frontier[item] < smallest:
-                smallest = frontier[item]
-        print(item, " : ", frontier[item])
+    # frontier[startpoint] = 0 #getTime(startpoint, endPoint) + heuristicFunction(startpoint, endPoint)
+    # keyList = list(frontier.keys())
+
+    curr = fq.get()
+    while curr != endPoint:
+        print(curr)
+        closed[curr.mappoint.toString()] = curr.f
+        # chosen_st = keyList[0]         # chosen    = node with smallest f
+        # smallest = frontier[chosen_st]     # smallest  = smallest f
+        # for item in keyList:
+        #     if frontier[item] < smallest:
+        #         chosen_st = item
+        #         smallest = frontier[item]
+        # print(item, " : ", frontier[item])
         # smallest will now be a number corresponding to the smallest f
         # in the frontier keys.
 
         # take the smallest value out of the frontier dictionary
         # del frontier[chosen_st]
-        frontier.pop(chosen_st)
-        print(chosen_st)
-        chosen = fromString(chosen_st)
-        #chosen.isSolution = True
-        neighbors = getNeighbors(chosen)
-        parent_g = smallest - heuristicFunction(chosen, endPoint)       # g = f - h
-        if chosen_st == endPoint.toString():
-            break
+        # frontier.pop(chosen_st)
+        # print(chosen_st)
+        # chosen = fromString(chosen_st)
+        # chosen.isSolution = True
+
+        neighbors = getNeighbors(curr.mappoint)
+        curr_g = curr.f - heuristicFunction(curr.mappoint, endPoint)
+        # neighbors = getNeighbors(chosen)
+        # parent_g = smallest - heuristicFunction(chosen, endPoint)       # g = f - h
+
+        # if chosen_st == endPoint.toString():
+        #     break
         for n in neighbors:
+
+            succ_g = getTime(curr.mappoint, n)
+            succ_h = heuristicFunction(n, endPoint)
+            succ_f = (curr_g + succ_g) + succ_h
             # print(chosen_st, " : ", n.toString())
 
-            succ_g = getTime(chosen, n)
-            succ_h = heuristicFunction(n, endPoint)
-            succ_f = (parent_g + succ_g) + succ_h
 
+            # succ_g = getTime(chosen, n)
+            # succ_h = heuristicFunction(n, endPoint)
+            # succ_f = (parent_g + succ_g) + succ_h
             toSkip = False
             if TERRAINS[n.terrain] == 0.0:
                 toSkip = True
             if n.toString() in closed.keys():
                 toSkip = True
             if toSkip == False:
-                parents[n.toString()] = chosen
-                frontier[n.toString()] = succ_f
+                parents[n.toString()] = curr.mappoint
+                # parents[n.toString()] = chosen
+                # frontier[n.toString()] = succ_f
+                fq.put(APoint(n, succ_f))
                 closed[n.toString()] = succ_f
-        closed[chosen_st] = smallest
-        keyList = list(frontier.keys())
-        print(len(keyList))
+        curr = fq.get()
+        # closed[chosen_st] = smallest
+        # keyList = list(frontier.keys())
+        # print(len(keyList))
 
     backTrace = endPoint
 
@@ -290,6 +322,8 @@ def writeImage(outputFile : str):
             else:
                 pixelColor = SOL_COLOR
             im.putpixel((y, x), pixelColor)
+    im.save(outputFile)
+    print("Image saved as", outputFile)
     im.show()
 
 #########
