@@ -71,14 +71,14 @@ def getTime(curr : MapPoint, dest : MapPoint):
     z_dist = dest.z - curr.z    # height
     flat_ground_distance = math.sqrt((x_dist ** 2) + (y_dist ** 2))
     real_distance = math.sqrt((x_dist ** 2) + (y_dist ** 2) + (z_dist ** 2))
-    if flat_ground_distance == 0:   # it's the same location.
-        return 0
-    slope = (z_dist) / flat_ground_distance
-    default_speed = TERRAINS[curr.terrain]
-    real_speed = default_speed * math.e ** (-3.5 * abs(slope + 0.05))
-    if real_speed == 0:
-        return -1
-    return real_distance / real_speed
+    # if flat_ground_distance == 0:   # it's the same location.
+    #     return 0
+    # slope = (z_dist) / flat_ground_distance
+    # default_speed = TERRAINS[curr.terrain]
+    # real_speed = default_speed * math.e ** (-3.5 * abs(slope + 0.05))
+    # if real_speed == 0:
+    #     return -1
+    return real_distance * (7 - TERRAINS[curr.terrain]) #/ real_speed
 
 def heuristicFunction(curr : MapPoint, dest : MapPoint):
     x_dist = dest.x - curr.x
@@ -93,7 +93,7 @@ def heuristicFunction(curr : MapPoint, dest : MapPoint):
     real_speed = default_speed * math.e ** (-3.5 * abs(slope + 0.05))
     if real_speed == 0:
         return -1
-    return real_distance / real_speed
+    return real_distance #/ real_speed
 
 
 

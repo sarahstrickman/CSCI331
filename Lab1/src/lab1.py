@@ -12,6 +12,9 @@ g = accumulative cost to move (from start)
 h = heuristic (lower == better)
 '''
 def a_star(startpoint : MapPoint, endPoint : MapPoint):
+
+    done = False
+
     frontier = dict()       # (MapPoint : int)
     closed = dict()     # (MapPoint : int)
     parents = dict()    # (MapPoint : MapPoint)
@@ -19,7 +22,7 @@ def a_star(startpoint : MapPoint, endPoint : MapPoint):
     parents[startpoint] = None
     frontier[startpoint] = 0
     keyList = list(frontier.keys())
-    while len(keyList) > 0:
+    while len(keyList) > 0 and done == False:
         chosen_st = keyList[0]         # chosen    = node with smallest f
         smallest = frontier[chosen_st]     # smallest  = smallest f
         for item in keyList:
@@ -32,42 +35,66 @@ def a_star(startpoint : MapPoint, endPoint : MapPoint):
         del frontier[chosen_st]
         print(chosen_st)
         chosen = fromString(chosen_st)
+        chosen.isSolution = True
         neighbors = getNeighbors(chosen)
         parent_g = smallest - heuristicFunction(chosen, endPoint)       # g = f - h
         for n in neighbors:
-            parents[n.toString] = chosen
+            # print(chosen_st, " : ", n.toString())
+            parents[n.toString()] = chosen
+
 
             if n.toString() == endPoint.toString():
-                return parents
+                print("nice.")
+                done = True
+                parents[endPoint.toString()] = n
+                break
 
-            succ_f = (parent_g + getTime(chosen, n)) + heuristicFunction(n, endPoint)
+            succ_g = getTime(chosen, n)
+            succ_h = heuristicFunction(n, endPoint)
+            succ_f = (parent_g + succ_g) + succ_h
 
             toSkip = False
+            if (succ_g < 0) or (succ_h < 0):
+                toSkip = True
             if n.toString() in frontier:
-                if frontier[n.toString()] <= succ_f:
+                if frontier[n.toString()] < succ_f:
                     toSkip = True
             if n.toString() in closed:
-                if frontier[n.toString()] <= succ_f:
+                if closed[n.toString()] < succ_f:
                     toSkip = True
             if toSkip == False:
                 frontier[n.toString()] = succ_f
 
         closed[chosen_st] = smallest
+        keyList = list(frontier.keys())
 
     backTrace = endPoint
+
+    if endPoint.toString() not in parents:
+        return 1
+
     while backTrace != None:
         backTrace.isSolution = True
-        backTrace = parents[backTrace]
+
+        print(backTrace)
+        backTrace = parents[backTrace.toString()]
     return 0
 
 
 def a_star_path(path):
-    print(path)
+    # print(path)
     i = 0
     while i < len(path) - 1:
-        a_star(path[i], endPoint=path[i + 1])
+        isValid = a_star(path[i], endPoint=path[i + 1])
         i += 1
-    a_star(path[len(path) - 1], path[0])
+        if isValid != 0:
+            print("No solution found")
+            return
+
+    isValid = a_star(path[len(path) - 1], path[0])
+    if isValid != 0:
+        print("No solution found")
+        return
 
 '''
 Process the map during the spring.
@@ -215,7 +242,7 @@ def processPath(pathFileName : str):
     with open(pathFileName) as f:
         for line in f:
             coords = line.split()
-            n_point = map[int(coords[0])][int(coords[1])]
+            n_point = map[int(coords[1])][int(coords[0])]
             path.append(n_point)
     f.close()
     return path
@@ -263,7 +290,11 @@ def writeImage(outputFile : str):
         t_colors[TERRAINCOLORS[k]] = k
     for x in range(len(map) - 5):
         for y in range(len(map[x]) - 5):
-            pixelColor = t_colors[map[x][y].terrain]
+            pixelColor = (0, 0, 0)
+            if map[x][y].isSolution == False:
+                pixelColor = t_colors[map[x][y].terrain]
+            else:
+                pixelColor = SOL_COLOR
             im.putpixel((y, x), pixelColor)
     im.show()
 
