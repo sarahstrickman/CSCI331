@@ -78,7 +78,7 @@ def getTime(curr : MapPoint, dest : MapPoint):
     # real_speed = default_speed * math.e ** (-3.5 * abs(slope + 0.05))
     # if real_speed == 0:
     #     return -1
-    return real_distance * (7 - TERRAINS[curr.terrain]) #/ real_speed
+    return real_distance * (7.0 - TERRAINS[curr.terrain]) #/ real_speed
 
 def heuristicFunction(curr : MapPoint, dest : MapPoint):
     x_dist = dest.x - curr.x
