@@ -3,7 +3,7 @@ import sys
 import numpy
 import pandas
 from sklearn import *
-from lab2training import *
+from lab2DT import *
 
 
 '''
