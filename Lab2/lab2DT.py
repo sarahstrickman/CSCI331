@@ -1,20 +1,64 @@
 """
 This file has all functions relating to training the data.
+
+maximum tree depth is 14. this is because I have 14 attributes
 """
+import os
 from dataclasses import dataclass
 import re
-import math
+import pickle
+from typing import Union
+
+MAX_DEPTH = 15
 
 '''
 to keep track of each example
 '''
-
-
 @dataclass
 class textEntity:
-    lang: str
+    lang: Union[None, str]
     text: str
+    # def __init__(self):
+    #     self.lang = "en"
+    #     self.text = ""
 
+@dataclass
+class treeNode:
+    dataset: list   # list of textEntities
+    feature: Union[None, str]   # leaf nodes will not have a feature associated with them.
+    majority: str
+    yes: Union[None, 'treeNode']
+    no: Union[None, 'treeNode']
+    # def __init__(self):
+    #     self.dataset = []
+    #     self.feature = None
+    #     self.majority = str
+    #     self.yes = None
+    #     self.no = None
+
+'''
+predict if a sample is english or dutch, given a sample
+'''
+def predictDT(sample, tree):
+    sampleText = textEntity(lang=None, text=sample)
+    while tree is not None:
+        if (tree.feature == None) or (tree.yes == None and tree.no == None):    # you're at a leaf node
+            return tree.majority
+        else:
+            has = hasFeature(sampleText, tree.feature)    # does sample have feature?
+            if has:
+                tree = tree.yes
+            else:
+                tree = tree.no
+    return "en"
+
+'''
+given a filename, return a tree
+'''
+def trainDT(filename):
+    samples = readFile(filename)
+    tree = makeTree(samples)
+    return tree
 
 '''
 open a file. take all the things in the file and make them into textEntity objects
@@ -22,7 +66,7 @@ open a file. take all the things in the file and make them into textEntity objec
 def readFile(filename: str):
     examples = []
     try:
-        fp = open(filename)
+        fp = open(filename, encoding="utf-8")
         for line in fp:
             l = line.split("|")
             examples.append(textEntity(lang = l[0], text = l[1]))
@@ -30,18 +74,100 @@ def readFile(filename: str):
         fp.close()
         return examples
     except:
-        print("Error: invalid file or file format.")
-
+        print("Error: invalid filename or file format.")
+        exit()
 
 '''
-train the data
-'''
-def train(examples: list[textEntity]):
-    # textEntities = readFile(filename)
-    #
-    print(examples)
-    pass
+make the tree.
 
+leaf nodes will not have a feature associated with them.
+'''
+def makeTree(dataset, featurelist=None, currdepth = 0):
+    if featurelist is None:
+        featurelist = {"hasHET",
+                       "hasNAAR",
+                       "hasDAT",
+                       "hasHEEFT",
+                       "hasARE",
+                       "hasZIJN",
+                       "hasNIET",
+                       "hasA",
+                       "hasBE",
+                       "hasDE",
+                       "hasIJCons",
+                       "hasUmlaut",
+                       "hasConsDE",
+                       "hasVowECons",
+                       "has2VowCons",
+                       "hasIJ",
+                       "avgLen4"}
+    # if no data to analyze, return node with no feature. just majority
+    if len(dataset) == 0:
+        return treeNode(dataset=dataset, majority="en", feature=None,yes=None,no=None)
+
+    # if you have run out of features, return a treenode with the majority language
+    elif len(featurelist) == 0 or currdepth >= MAX_DEPTH:
+        numEn = 0
+        numNL = 0
+        for item in dataset:
+            if item.lang == "en":
+                numEn += 1
+            else:
+                numNL += 1
+        if numEn >= numNL:
+            return treeNode(dataset=dataset, majority="en", feature=None, yes=None, no=None)
+        return treeNode(dataset=dataset, majority="nl", feature=None, yes=None, no=None)
+
+    # calculate gini index for all features in featurelist.
+    # keep track of the lowest one
+    lowestGini = 100.00
+    lowestFeature = ""
+    for feature in featurelist:
+        tempGini = featureGini(feature, dataset)
+        if tempGini < lowestGini:
+            lowestGini = tempGini
+            lowestFeature = feature
+
+    curr = treeNode(dataset=dataset, majority="en", feature=lowestFeature, yes=None, no=None)
+
+    # split dataset on feature with lowest gini
+    yesList, noList = featureSplit(lowestFeature, dataset)
+
+    tempdataset = featurelist.remove(lowestFeature)
+    # for hasFeature and NOHasFeature, check remaining ginis. create tree accordingly
+    curr.yes = makeTree(yesList, tempdataset, currdepth + 1)
+    curr.no = makeTree(noList, featurelist, currdepth + 1)
+    featurelist.add(lowestFeature)
+
+    return curr
+
+'''
+split a dataset on a feature.
+
+return 2 lists: 1 HAS feature, 2 DOESN'T have feature
+'''
+def featureSplit(feature, dataset):
+    yes = []
+    no = []
+    for item in dataset:
+        if hasFeature(item, feature):
+            yes.append(item)
+        else:
+            no.append(item)
+    return yes, no
+
+'''
+split a dataset on a given feature
+'''
+def split(feature, dataset):
+    yes = []
+    no = []
+    for item in dataset:
+        if hasFeature(item, feature):
+            yes.append(item)
+        else:
+            no.append(item)
+    return yes, no
 
 '''
 find the gini index of a dataset.
@@ -59,10 +185,9 @@ returns a float.
 def currGini(tot, numEN, numNL):
     if tot == 0:
         return 0
-    pEN = numEN / float(len(tot))
-    pNL = numNL / float(len(tot))
+    pEN = numEN / float(tot)
+    pNL = numNL / float(tot)
     return 1.0 - (pEN ** 2.0) - (pNL ** 2.0)
-
 
 '''
 find gini impurity given an feature and a dataset. this is used for non-leaf nodes
@@ -80,7 +205,7 @@ def featureGini(feature, dataset):
     noNL = 0    # doesn't have feature and is dutch
 
     for item in dataset:
-        if hasFeature(item.text, feature):
+        if hasFeature(item, feature):
             yesItems.append(item)
             if item.lang == "en":
                 yesEN += 1
@@ -103,7 +228,6 @@ def featureGini(feature, dataset):
 
     # compute weighted average
     return yesWeighted + noWeighted
-
 
 '''
 check if a feature is true for a given sample 
@@ -147,63 +271,68 @@ def hasFeature(sample, feature):
         print("invalid feature")
         return False
 
+'''
+functions for the features
+'''
 
 def hasHET(sample):
-    return " het " in sample.lower()
+    return " het " in sample.text.lower()
 
 def hasNAAR(sample):
-    return " naar " in sample.lower()
+    return " naar " in sample.text.lower()
 
 def hasDAT(sample):
-    return " dat " in sample.lower()
+    return " dat " in sample.text.lower()
 
 def hasHEEFT(sample):
-    return " heeft " in sample.lower()
+    return " heeft " in sample.text.lower()
 
 def hasARE(sample):
-    return " are " in sample.lower()
+    return " are " in sample.text.lower()
 
 def hasZIJN(sample):
-    return " zijn " in sample.lower()
+    return " zijn " in sample.text.lower()
 
 def hasNIET(sample):
-    return " niet " in sample.lower()
+    return " niet " in sample.text.lower()
 
 def hasA(sample):
     # it has to be a lowercase a. (case sensitive)
-    return " a " in sample
+    return " a " in sample.text
 
 def hasBE(sample):
-    return " be " in sample.lower()
+    return " be " in sample.text.lower()
 
 def hasDE(sample):
-    return " de " in sample.lower()
+    return " de " in sample.text.lower()
 
 def hasIJCons(sample):
-    return re.match("ij[b-df-hj-np-tv-z]", sample.lower()) is not None
+    return re.match("ij[b-df-hj-np-tv-z]", sample.text.lower()) is not None
 
 def hasUmlaut(sample):
-    return re.match("[ÄäËëÏïÖöÜüŸÿ]", sample) is not None
+    r = re.compile(r'[^\W\d_]', re.U)
+    return re.match("[\u00c4-\u00cb-\u00cf-\u00d6-\u00dc-\u00e4-\u00eb-\u00ef-\u00f6-\u00fc-\u00ff-\u0178]", sample.text) is not None
 
 def hasConsDE(sample):
-    return re.match("[b-df-hj-np-tv-z]de ", sample.lower()) is not None
+    return re.match("[b-df-hj-np-tv-z]de ", sample.text.lower()) is not None
 
 def hasVowECons(sample):
-    return re.match("[aiou]e[b-df-hj-np-tv-z]", sample.lower()) is not None
+    return re.match("[aiou]e[b-df-hj-np-tv-z]", sample.text.lower()) is not None
 
 def has2VowCons(sample):
-    return (re.match("aa[b-df-hj-np-tv-z]", sample.lower()) is not None) or \
-           (re.match("ee[b-df-hj-np-tv-z]", sample.lower()) is not None) or \
-           (re.match("ii[b-df-hj-np-tv-z]", sample.lower()) is not None) or \
-           (re.match("oo[b-df-hj-np-tv-z]", sample.lower()) is not None) or \
-           (re.match("uu[b-df-hj-np-tv-z]", sample.lower()) is not None)
+    return (re.match("aa[b-df-hj-np-tv-z]", sample.text.lower()) is not None) or \
+           (re.match("ee[b-df-hj-np-tv-z]", sample.text.lower()) is not None) or \
+           (re.match("ii[b-df-hj-np-tv-z]", sample.text.lower()) is not None) or \
+           (re.match("oo[b-df-hj-np-tv-z]", sample.text.lower()) is not None) or \
+           (re.match("uu[b-df-hj-np-tv-z]", sample.text.lower()) is not None)
 
 def hasIJ(sample):
-    return "ij" in sample.lower()
+    return "ij" in sample.text.lower()
 
 def avgLen4(sample):
-    txt = sample.replace("."," ")
-    txt = sample.replace(",", " ")
+    # TODO : work on serializing/deserializing
+    txt = sample.text.replace("."," ")
+    txt = sample.text.replace(",", " ")
     txt = txt.split(" ")
     length = len(txt)
     summ = 0
@@ -213,6 +342,39 @@ def avgLen4(sample):
     return avg >= 4
 
 
+def exportTree(data, filename):
+    outfile = open(filename, 'wb')
+    pickle.dump(data, outfile)
+    outfile.close()
+
+def importTree(filename):
+    infile = open(filename, 'rb')
+    new_dict = pickle.load(infile)
+    infile.close()
+
+if __name__ == "__main__":
+    print(os.getcwd())
+
+    tree = None
+    o = input("load file name: ")
+    if len(o) > 0:
+        o = "knowledge_base/" + o
+        tree = importTree(o)
+    else:
+        print("re-training...")
+        filename = "training_data/train_master.dat" #input("filename: ")
+        tree = trainDT(filename)
+
+    s = input("save file name: ")
+    if len(s) >0:
+        s = "knowledge_base/" + s
+        exportTree(tree, s)
+
+    text = input("sample text (qq for escape): ")
+    while text != "qq":
+        lang = predictDT(text, tree)
+        print(lang + "\t|\t"+text)
+        text = input("sample text (qq for escape): ")
 
 
 
