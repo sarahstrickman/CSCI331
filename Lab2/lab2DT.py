@@ -136,7 +136,7 @@ def makeTree(dataset, featurelist=None, currdepth = 0):
     tempdataset = featurelist.remove(lowestFeature)
     # for hasFeature and NOHasFeature, check remaining ginis. create tree accordingly
     curr.yes = makeTree(yesList, tempdataset, currdepth + 1)
-    curr.no = makeTree(noList, featurelist, currdepth + 1)
+    curr.no = makeTree(noList, tempdataset, currdepth + 1)
     featurelist.add(lowestFeature)
 
     return curr
