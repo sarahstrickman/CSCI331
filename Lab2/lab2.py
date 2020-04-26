@@ -1,9 +1,6 @@
 
 import sys
-import numpy
-import pandas
-from sklearn import *
-from lab2DT import *
+import lab2DT
 
 
 '''
@@ -26,12 +23,32 @@ newline. It should not print anything else.
 def main():
     if len(sys.argv) == 4:
         # run training
-        pass
+        examples = sys.argv[1]
+        hypotOut = sys.argv[2]
+        learnType = sys.argv[3]
+
+        if learnType == "dt":
+            tree = lab2DT.trainDT(examples)
+            lab2DT.exportTree(tree, hypotOut)
+        else:
+            # TODO
+            print("i havent implemented that because im stupid :/")
+            exit(0)
+
     elif len(sys.argv) == 3:
+        hypot = sys.argv[1]
+        tree = lab2DT.importTree(hypot)
+        file = sys.argv[2]
+
+        # determine if it is a DT or adaboost.
+        # use instanceof
+
+        for line in open(file):
+            # predict the according thing
+            pass
         # run prediction
         pass
     else:
         print("Usage:\n"
               "train <examples> <hypothesisOut> <learning-type>\n"
               "predict <hypothesis> <file>")
-    pass

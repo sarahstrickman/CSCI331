@@ -1,5 +1,5 @@
 """
-This file has all functions relating to training the data.
+This file has all functions relating to training the data and decision trees.
 
 maximum tree depth is 14. this is because I have 14 attributes
 """
@@ -9,6 +9,7 @@ import re
 import pickle
 from typing import Union
 
+
 MAX_DEPTH = 20
 
 '''
@@ -16,26 +17,50 @@ to keep track of each example
 '''
 @dataclass
 class textEntity:
-    # lang: Union[None, str]
-    # text: str
-    def __init__(self, lang: Union[None, str]=None, text: str=""):
+    def __init__(self,
+                 lang: Union[None, str] = None,
+                 text: str = ""):
         self.lang = lang
         self.text = text
 
 @dataclass
 class treeNode:
-    # dataset: list   # list of textEntities
-    # feature: Union[None, str]   # leaf nodes will not have a feature associated with them.
-    # majority: str
-    # yes: Union[None, 'treeNode']
-    # no: Union[None, 'treeNode']
-    def __init__(self, dataset: list=[], feature: Union[None, str]=None, majority: str="",
-                 yes: Union[None, 'treeNode']=None, no: Union[None, 'treeNode']=None):
+    def __init__(self,
+                 dataset: list = [],                # list of textEntities
+                 feature: Union[None, str] = None,  # leaf nodes will not have a feature associated with them.
+                 majority: str = "",
+                 yes: Union[None, 'treeNode'] = None,
+                 no: Union[None, 'treeNode'] = None):
         self.dataset = dataset
         self.feature = feature
         self.majority = majority
         self.yes = yes
         self.no = no
+
+'''
+test how accurate this program is.
+This program expects a file full of samples that are in the same language
+
+    lang        : the language expected of the samples
+    treefile    : the file containing the serialized tree you are using to predict
+    samplefile  : the file containign text samples to test
+
+prints all incorrect samples, then prints the accuracy as a percentage.
+returns accuracy (as a float)
+'''
+def testAccuracyDT(lang, tree, samplefile):
+    numIncorrect = 0
+    fp = open(samplefile, encoding="utf-8")
+    samples = fp.readlines()
+    totalSamples = len(samples)
+    for sample in samples:
+        if predictDT(sample, tree) != lang:
+            print(str(numIncorrect) + ".\t" +sample.strip())
+            numIncorrect += 1
+    accuracy = (totalSamples - numIncorrect) / totalSamples
+    print("---------\naccuracy:\t" + str(accuracy * 100) + "%")
+    fp.close()
+    return accuracy
 
 '''
 predict if a sample is english or dutch, given a sample
@@ -69,7 +94,7 @@ def readFile(filename: str):
     try:
         fp = open(filename, encoding="utf-8")
         for line in fp:
-            l = line.split("|")
+            l = line.strip().split("|")
             examples.append(textEntity(lang = l[0], text = l[1]))
             pass
         fp.close()
@@ -232,6 +257,7 @@ def featureGini(feature, dataset):
 
 '''
 check if a feature is true for a given sample 
+sample is a textEntity.
 '''
 def hasFeature(sample, feature):
     if feature == "hasHET":
@@ -275,61 +301,44 @@ def hasFeature(sample, feature):
 '''
 functions for the features
 '''
-
 def hasHET(sample):
     return " het " in sample.text.lower()
-
 def hasNAAR(sample):
     return " naar " in sample.text.lower()
-
 def hasDAT(sample):
     return " dat " in sample.text.lower()
-
 def hasHEEFT(sample):
     return " heeft " in sample.text.lower()
-
 def hasARE(sample):
     return " are " in sample.text.lower()
-
 def hasZIJN(sample):
     return " zijn " in sample.text.lower()
-
 def hasNIET(sample):
     return " niet " in sample.text.lower()
-
 def hasA(sample):
     # it has to be a lowercase a. (case sensitive)
     return " a " in sample.text
-
 def hasBE(sample):
     return " be " in sample.text.lower()
-
 def hasDE(sample):
     return " de " in sample.text.lower()
-
 def hasIJCons(sample):
     return re.match("ij[b-df-hj-np-tv-z]", sample.text.lower()) is not None
-
 def hasUmlaut(sample):
     r = re.compile(r'[^\W\d_]', re.U)
     return re.match("[\u00c4-\u00cb-\u00cf-\u00d6-\u00dc-\u00e4-\u00eb-\u00ef-\u00f6-\u00fc-\u00ff-\u0178]", sample.text) is not None
-
 def hasConsDE(sample):
     return re.match("[b-df-hj-np-tv-z]de ", sample.text.lower()) is not None
-
 def hasVowECons(sample):
     return re.match("[aiou]e[b-df-hj-np-tv-z]", sample.text.lower()) is not None
-
 def has2VowCons(sample):
     return (re.match("aa[b-df-hj-np-tv-z]", sample.text.lower()) is not None) or \
            (re.match("ee[b-df-hj-np-tv-z]", sample.text.lower()) is not None) or \
            (re.match("ii[b-df-hj-np-tv-z]", sample.text.lower()) is not None) or \
            (re.match("oo[b-df-hj-np-tv-z]", sample.text.lower()) is not None) or \
            (re.match("uu[b-df-hj-np-tv-z]", sample.text.lower()) is not None)
-
 def hasIJ(sample):
     return "ij" in sample.text.lower()
-
 def avgLen4(sample):
     # TODO : work on serializing/deserializing
     txt = sample.text.replace("."," ")
@@ -354,9 +363,8 @@ def importTree(filename):
     infile.close()
     return new_dict
 
-if __name__ == "__main__":
-    print(os.getcwd())
 
+if __name__ == "__main__":
     tree = None
     o = input("load file name: ")
     if len(o) > 0:
@@ -372,11 +380,16 @@ if __name__ == "__main__":
         s = "knowledge_base/" + s
         exportTree(tree, s)
 
-    text = input("sample text (qq for escape): ")
-    while text != "qq":
-        lang = predictDT(text, tree)
-        print(lang + "\t|\t"+text)
+    t = input("test file name: ")
+    l = input("test lang: ")
+    if len(t) > 0:
+        testAccuracyDT(l, tree, t)
+    else:
         text = input("sample text (qq for escape): ")
+        while text != "qq":
+            lang = predictDT(text, tree)
+            print(lang + "\t|\t"+text)
+            text = input("sample text (qq for escape): ")
 
 
 
