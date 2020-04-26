@@ -9,32 +9,33 @@ import re
 import pickle
 from typing import Union
 
-MAX_DEPTH = 15
+MAX_DEPTH = 20
 
 '''
 to keep track of each example
 '''
 @dataclass
 class textEntity:
-    lang: Union[None, str]
-    text: str
-    # def __init__(self):
-    #     self.lang = "en"
-    #     self.text = ""
+    # lang: Union[None, str]
+    # text: str
+    def __init__(self, lang: Union[None, str]=None, text: str=""):
+        self.lang = lang
+        self.text = text
 
 @dataclass
 class treeNode:
-    dataset: list   # list of textEntities
-    feature: Union[None, str]   # leaf nodes will not have a feature associated with them.
-    majority: str
-    yes: Union[None, 'treeNode']
-    no: Union[None, 'treeNode']
-    # def __init__(self):
-    #     self.dataset = []
-    #     self.feature = None
-    #     self.majority = str
-    #     self.yes = None
-    #     self.no = None
+    # dataset: list   # list of textEntities
+    # feature: Union[None, str]   # leaf nodes will not have a feature associated with them.
+    # majority: str
+    # yes: Union[None, 'treeNode']
+    # no: Union[None, 'treeNode']
+    def __init__(self, dataset: list=[], feature: Union[None, str]=None, majority: str="",
+                 yes: Union[None, 'treeNode']=None, no: Union[None, 'treeNode']=None):
+        self.dataset = dataset
+        self.feature = feature
+        self.majority = majority
+        self.yes = yes
+        self.no = no
 
 '''
 predict if a sample is english or dutch, given a sample
@@ -351,6 +352,7 @@ def importTree(filename):
     infile = open(filename, 'rb')
     new_dict = pickle.load(infile)
     infile.close()
+    return new_dict
 
 if __name__ == "__main__":
     print(os.getcwd())
