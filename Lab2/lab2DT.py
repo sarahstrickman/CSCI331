@@ -8,34 +8,10 @@ from dataclasses import dataclass
 import re
 import pickle
 from typing import Union
+import lab2
 
 
 MAX_DEPTH = 20
-
-'''
-to keep track of each example
-'''
-@dataclass
-class textEntity:
-    def __init__(self,
-                 lang: Union[None, str] = None,
-                 text: str = ""):
-        self.lang = lang
-        self.text = text
-
-@dataclass
-class treeNode:
-    def __init__(self,
-                 dataset: list = [],                # list of textEntities
-                 feature: Union[None, str] = None,  # leaf nodes will not have a feature associated with them.
-                 majority: str = "",
-                 yes: Union[None, 'treeNode'] = None,
-                 no: Union[None, 'treeNode'] = None):
-        self.dataset = dataset
-        self.feature = feature
-        self.majority = majority
-        self.yes = yes
-        self.no = no
 
 '''
 test how accurate this program is.
@@ -62,15 +38,15 @@ def testAccuracyDT(lang, tree, samplefile):
     fp.close()
     return accuracy
 
-def predictFile(filename):
-    for line in open(filename):
-        print(predictDT(line))
+def predictFile(tree, filename):
+    for line in open(filename, encoding="utf-8"):
+        print(predictDT(line, tree))
 
 '''
 predict if a sample is english or dutch, given a sample
 '''
 def predictDT(sample, tree):
-    sampleText = textEntity(lang=None, text=sample)
+    sampleText = lab2.textEntity(lang=None, text=sample)
     while tree is not None:
         if (tree.feature == None) or (tree.yes == None and tree.no == None):    # you're at a leaf node
             return tree.majority
@@ -99,7 +75,7 @@ def readFile(filename: str):
         fp = open(filename, encoding="utf-8")
         for line in fp:
             l = line.strip().split("|")
-            examples.append(textEntity(lang = l[0], text = l[1]))
+            examples.append(lab2.textEntity(lang = l[0], text = l[1]))
             pass
         fp.close()
         return examples
@@ -135,7 +111,7 @@ def makeTree(dataset, featurelist=None, currdepth = 0):
                        "avgLen4"}
     # if no data to analyze, return node with no feature. just majority
     if len(dataset) == 0:
-        return treeNode(dataset=dataset, majority="en", feature=None,yes=None,no=None)
+        return lab2.treeNode(dataset=dataset, majority="en", feature=None,yes=None,no=None)
 
     # if you have run out of features, return a treenode with the majority language
     elif len(featurelist) == 0 or currdepth >= MAX_DEPTH:
@@ -147,8 +123,8 @@ def makeTree(dataset, featurelist=None, currdepth = 0):
             else:
                 numNL += 1
         if numEn >= numNL:
-            return treeNode(dataset=dataset, majority="en", feature=None, yes=None, no=None)
-        return treeNode(dataset=dataset, majority="nl", feature=None, yes=None, no=None)
+            return lab2.treeNode(dataset=dataset, majority="en", feature=None, yes=None, no=None)
+        return lab2.treeNode(dataset=dataset, majority="nl", feature=None, yes=None, no=None)
 
     # calculate gini index for all features in featurelist.
     # keep track of the lowest one
@@ -160,7 +136,7 @@ def makeTree(dataset, featurelist=None, currdepth = 0):
             lowestGini = tempGini
             lowestFeature = feature
 
-    curr = treeNode(dataset=dataset, majority="en", feature=lowestFeature, yes=None, no=None)
+    curr = lab2.treeNode(dataset=dataset, majority="en", feature=lowestFeature, yes=None, no=None)
 
     # split dataset on feature with lowest gini
     yesList, noList = featureSplit(lowestFeature, dataset)

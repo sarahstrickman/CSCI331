@@ -8,53 +8,7 @@ from dataclasses import dataclass
 import re
 import pickle
 import math
-
-@dataclass
-class textEntity:
-    def __init__(self,
-                 text: str = "",
-                 lang: str = "",
-                 weight: float = 0.0):
-        self.text = text
-        self.lang = lang
-        self.weight = weight
-    def __hash__(self):
-        return self.text.__hash__()
-    def __str__(self):
-        return "(text=" + self.text + ", lang = " + self.lang + ", weight = " + str(self.weight) + ")"
-
-@dataclass
-class stump:
-    def __init__(self,
-                 feature: str = "",
-                 yesMaj: str = "",
-                 noMaj: str = "",
-                 yesEN: set = set(),
-                 yesNL: set = set(),
-                 noEN: set = set(),
-                 noNL: set = set()):
-        self.feature = feature
-        self.yesMaj = yesMaj
-        self.noMaj = noMaj
-        self.yesEN = yesEN
-        self.yesNL = yesNL
-        self.noEN = noEN
-        self.noNL = noNL
-    def __hash__(self):
-        return self.feature.__hash__()
-    def __str__(self):
-        feat = "feat =" + self.feature
-        ym = "yesMaj = " + self.yesMaj
-        nm = "noMaj = " + self.noMaj
-        say = "say = " + str(getSay(self))
-        nums = "YEN/YNL/NEN/NNL = " + str(len(self.yesEN)) + "/" + str(len(self.yesNL)) + "/" + str(len(self.noEN)) + "/" + str(len(self.noNL))
-        return "(" + feat + ", " + ym + ", " + nm + ", " + say + ", " + nums + ")"
-    def freeze(self):
-        self.yesEN = frozenset(self.yesEN)
-        self.yesNL = frozenset(self.yesNL)
-        self.noEN = frozenset(self.noEN)
-        self.noNL = frozenset(self.noNL)
-        self.frozen = True
+import lab2
 
 
 '''
@@ -73,7 +27,7 @@ def readFile(filename):
         fp = open(filename, encoding="utf-8")
         for line in fp:
             l = line.strip().split("|")
-            t = textEntity(text=l[1], lang=l[0], weight= (1 / totEntries))
+            t = lab2.textEntity(text=l[1], lang=l[0], weight= (1 / totEntries))
             sampleSet.add(t)
         fp.close()
         return sampleSet
@@ -116,7 +70,7 @@ samples: samples to include in the creation of the stump
 feature: the feature associated with this stump
 '''
 def makeStump(samples, feature):
-    s = stump(feature=feature, yesEN=set(), yesNL=set(), noEN=set(),noNL=set())
+    s = lab2.stump(feature=feature, yesEN=set(), yesNL=set(), noEN=set(),noNL=set())
 
     for sample in samples:
         newsamp = sample
@@ -143,30 +97,6 @@ def makeStump(samples, feature):
     s.freeze()
     return s
 
-# def populateValues(samples, s : stump):
-#     for sample in samples:
-#         if hasFeature(sample, s.feature):
-#             if sample.lang == "en":
-#                 s.yesEN.add(sample)
-#             else:
-#                 s.yesNL.add(sample)
-#         else:
-#             if sample.lang == "en":
-#                 s.noEN.add(sample)
-#             else:
-#                 s.noNL.add(sample)
-#
-#     if len(s.yesEN) > len(s.yesNL):
-#         s.yesMaj = "en"
-#     else:
-#         s.yesMaj = "nl"
-#
-#     if len(s.noEN) > len(s.noNL):
-#         s.noMaj = "en"
-#     else:
-#         s.noMaj = "nl"
-#     return s
-
 '''
 find the stump with the lowest gini score
 '''
@@ -183,7 +113,7 @@ def lowestStumpGini(stumps):
 '''
 return the gini value of a single stump.
 '''
-def stumpGini(s: stump):
+def stumpGini(s: lab2.stump):
     numyesEN = float(len(s.yesEN))    # has feature and is english
     numyesNL = float(len(s.yesNL))    # has feature and is dutch
     totyes = numyesEN + numyesNL
@@ -219,7 +149,7 @@ def currGini(tot, numEN, numNL):
 '''
 how much say does this stump get?
 '''
-def getSay(s : stump):
+def getSay(s : lab2.stump):
     totErr = getTotError(s)
     if totErr <= 0.0:
         totErr = 0.001
@@ -227,23 +157,12 @@ def getSay(s : stump):
         totErr = 0.999
     return .5 * math.log((1.0 - totErr) / totErr)
 
-# def lowestStumpTotError(stumps):
-#     minStump = None
-#     minGini = 100.00
-#     for s in stumps:
-#         sgini = getTotError(s)
-#         if sgini < minGini:
-#             minGini = sgini
-#             minStump = s
-#
-#     return s
-
 '''
 get the total error of a stump (will be a float)
 
 How many entities did this stump get wrong?
 '''
-def getTotError(s : stump):
+def getTotError(s : lab2.stump):
     w = 0.00
     if s.yesMaj == "en":
         for sample in s.yesNL:
@@ -264,7 +183,7 @@ def getTotError(s : stump):
 '''
 update the weights of incorrect samples
 '''
-def updateWeights(s : stump):
+def updateWeights(s : lab2.stump):
     say = getSay(s)
     if s.yesMaj == "en":
         for sample in s.yesNL:
@@ -299,7 +218,7 @@ def updateWeights(s : stump):
 '''
 normalize text weights so that they add up to 1
 '''
-def normalizeWeights(s : stump):
+def normalizeWeights(s : lab2.stump):
     weightSum = 0.00
     for sample in s.yesEN:
         weightSum += sample.weight
@@ -381,20 +300,19 @@ def makeForest(samples):
             samples.add(i)
     return forest
 
-
 def trainAda(filename):
     samples = readFile(filename)
     forest = makeForest(samples)
     return forest
 
-def predictFile(filename):
-    for line in open(filename):
-        print(predictAda(line))
+def predictFile(forest, filename):
+    for line in open(filename, encoding="utf-8"):
+        print(predictAda(line, forest))
 
 def predictAda(sample, forest):
     numEN = 0.00
     numNL = 0.00
-    sample = textEntity(text=sample)
+    sample = lab2.textEntity(text=sample)
     for s in forest:
         if hasFeature(sample, s.feature):
             if s.yesMaj == "en":
@@ -435,8 +353,6 @@ def importForest(filename):
     new_dict = pickle.load(infile)
     infile.close()
     return new_dict
-
-
 
 '''
 check if a feature is true for a given sample 
