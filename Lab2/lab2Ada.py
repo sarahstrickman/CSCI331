@@ -247,17 +247,17 @@ def getTotError(s : stump):
     w = 0.00
     if s.yesMaj == "en":
         for sample in s.yesNL:
-            w += sample.weight
+            w += sample.weight * 1.16
     else:   # yesMaj is NL
         for sample in s.yesEN:
-            w += sample.weight
+            w += sample.weight * 1.16
 
     if s.noMaj == "en":
         for sample in s.noNL:
-            w += sample.weight
+            w += sample.weight / 1.16
     else:   # noMaj is NL
         for sample in s.noEN:
-            w += sample.weight
+            w += sample.weight / 1.16
 
     return w
 
@@ -539,7 +539,7 @@ def avgLen4(sample):
 def hasVAN(sample):
     return " van " in sample.text.lower()
 def hasAT(sample):
-    return " at " in sample.text.lower() or "At " in sample.text.lower()
+    return " at " in sample.text.lower()
 
 
 if __name__ == "__main__":
@@ -560,6 +560,7 @@ if __name__ == "__main__":
 
     t = input("test file name: ")
     if len(t) > 0:
+        t = "training_data/"+ t
         l = input("test lang: ")
         testAccuracyAda(l, forest, t)
     else:

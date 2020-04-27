@@ -34,8 +34,6 @@ def main():
         else:
             forest = lab2Ada.trainAda(examples)
             lab2Ada.exportForest(forest, hypotOut)
-            print("i havent implemented that because im stupid :/")
-            exit(0)
 
     elif len(sys.argv) == 3:
         hypot = sys.argv[1]

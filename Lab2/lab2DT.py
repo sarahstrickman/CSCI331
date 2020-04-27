@@ -115,6 +115,8 @@ leaf nodes will not have a feature associated with them.
 def makeTree(dataset, featurelist=None, currdepth = 0):
     if featurelist is None:
         featurelist = {"hasHET",
+                       "hasAT",
+                       "hasVAN",
                        "hasNAAR",
                        "hasDAT",
                        "hasHEEFT",
@@ -266,6 +268,10 @@ sample is a textEntity.
 def hasFeature(sample, feature):
     if feature == "hasHET":
         return hasHET(sample)
+    elif feature == "hasVAN":
+        return hasVAN(sample)
+    elif feature == "hasAT":
+        return hasAT(sample)
     elif feature == "hasNAAR":
         return hasNAAR(sample)
     elif feature == "hasDAT":
@@ -307,6 +313,10 @@ functions for the features
 '''
 def hasHET(sample):
     return " het " in sample.text.lower()
+def hasAT(sample):
+    return " at " in sample.text.lower()
+def hasVAN(sample):
+    return " van " in sample.text.lower()
 def hasNAAR(sample):
     return " naar " in sample.text.lower()
 def hasDAT(sample):
