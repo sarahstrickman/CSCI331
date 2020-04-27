@@ -1,6 +1,7 @@
 
 import sys
 import lab2DT
+import lab2Ada
 
 
 '''
@@ -31,7 +32,8 @@ def main():
             tree = lab2DT.trainDT(examples)
             lab2DT.exportTree(tree, hypotOut)
         else:
-            # TODO
+            forest = lab2Ada.trainAda(examples)
+            lab2Ada.exportForest(forest, hypotOut)
             print("i havent implemented that because im stupid :/")
             exit(0)
 
@@ -40,14 +42,11 @@ def main():
         tree = lab2DT.importTree(hypot)
         file = sys.argv[2]
 
-        # determine if it is a DT or adaboost.
-        # use instanceof
-
-        for line in open(file):
-            # predict the according thing
-            pass
-        # run prediction
-        pass
+        # run DT or ada prediction accordingly
+        if isinstance(tree, lab2DT.treeNode):
+            lab2DT.predictFile(file)
+        else:
+            lab2Ada.predictFile(file)
     else:
         print("Usage:\n"
               "train <examples> <hypothesisOut> <learning-type>\n"

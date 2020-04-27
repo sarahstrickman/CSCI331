@@ -62,6 +62,10 @@ def testAccuracyDT(lang, tree, samplefile):
     fp.close()
     return accuracy
 
+def predictFile(filename):
+    for line in open(filename):
+        print(predictDT(line))
+
 '''
 predict if a sample is english or dutch, given a sample
 '''
@@ -340,7 +344,6 @@ def has2VowCons(sample):
 def hasIJ(sample):
     return "ij" in sample.text.lower()
 def avgLen4(sample):
-    # TODO : work on serializing/deserializing
     txt = sample.text.replace("."," ")
     txt = sample.text.replace(",", " ")
     txt = txt.split(" ")
